@@ -9,6 +9,8 @@ const slots = new Map();
 let hidden = false;
 let hoverId = null;
 const SYS_H = 218;
+// Keep Paimon below a maximized window's title bar so its minimize/maximize/close buttons stay clickable.
+const SYS_TOP = 56;
 /** @type {{el: HTMLElement, stats: any, drawnKey: string} | null} */
 let sys = null;
 
@@ -120,9 +122,9 @@ function sysCard() {
 
 function layout() {
   // Paimon owns the top of the first column; sessions stack up from the bottom beneath her.
-  if (sys) { sys.el.style.right = `${MARGIN}px`; sys.el.style.top = `${MARGIN}px`; }
+  if (sys) { sys.el.style.right = `${MARGIN}px`; sys.el.style.top = `${SYS_TOP}px`; }
   const fit = (h) => Math.max(1, Math.floor((h - MARGIN) / (SLOT_H + GAP)));
-  const firstCol = fit(window.innerHeight - (sys ? SYS_H + GAP + MARGIN : 0));
+  const firstCol = fit(window.innerHeight - (sys ? SYS_TOP + SYS_H + GAP : 0));
   const perCol = fit(window.innerHeight);
   [...slots.values()].forEach((slot, i) => {
     const col = i < firstCol ? 0 : 1 + Math.floor((i - firstCol) / perCol);
