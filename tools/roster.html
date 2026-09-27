@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../src/renderer/style.css">
+<style>html,body{overflow:visible;height:auto;background:#1f1c2e}body{padding:14px;color:#e8e4ff;font:600 11px "Noto Sans",sans-serif}
+.grid{display:grid;grid-template-columns:repeat(var(--cols,9),96px);gap:6px 4px}.cell{text-align:center}.cell svg{width:96px;height:120px;display:block}
+.cell span{display:inline-flex;align-items:flex-start;gap:4px}.cell i{flex:none;margin-top:5px;width:7px;height:7px;border-radius:50%;background:var(--e)}
+.stage,.chibi *{animation:none!important}</style></head>
+<body style="overflow:hidden"><div class="grid" id="g"></div><script src="../src/characters.js"></script><script>
+// Every character in one pose, sorted by name (?state=done&cols=9), or Paimon's moods (?paimon).
+const {ROSTER,ELEMENTS,PAIMON,SYS_STATES,drawCharacter}=Archonthropic;const q=new URLSearchParams(location.search);
+const g=document.getElementById('g');g.style.setProperty('--cols',q.get('cols')||9);
+if(q.has('paimon')){g.style.setProperty('--cols',4);for(const [k,st] of Object.entries(SYS_STATES))
+  g.insertAdjacentHTML('beforeend',`<div class=cell style="--e:${st.color}">${drawCharacter(PAIMON,k,{fx:k==='strained'?'emoji:🔥':undefined})}<span><i></i>${st.label}</span></div>`);}
+else for(const c of [...ROSTER].sort((a,b)=>a.name.localeCompare(b.name)))
+  g.insertAdjacentHTML('beforeend',`<div class=cell style="--e:${ELEMENTS[c.element]}">${drawCharacter(c,q.get('state')||'ready')}<span><i></i>${c.name}</span></div>`);
+</script></body></html>
