@@ -1,5 +1,5 @@
 'use strict';
-const { ROSTER, STATES, PAIMON, SYS_STATES, ELEMENTS, drawCharacter } = window.Archontropic;
+const { ROSTER, STATES, PAIMON, SYS_STATES, ELEMENTS, drawCharacter } = window.Archonthropic;
 const strip = document.getElementById('strip');
 const card = document.getElementById('card');
 

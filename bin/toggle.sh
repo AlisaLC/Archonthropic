@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Show/hide all companions at once (bind this to a keyboard shortcut).
-# Starts Archontropic if it isn't running yet.
+# Starts Archonthropic if it isn't running yet.
 DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-PID_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/archontropic/app.pid"
+PID_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/archonthropic/app.pid"
 if [ -f "$PID_FILE" ] && kill -USR2 "$(cat "$PID_FILE")" 2>/dev/null; then
   exit 0
 fi

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Undo bin/setup.sh: stop the app and remove the hooks, shortcut and autostart entry.
-# Your config (~/.config/archontropic) and custom sprites are kept; delete that folder too if you like.
+# Your config (~/.config/archonthropic) and custom sprites are kept; delete that folder too if you like.
 set -uo pipefail
 DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-STATE="${XDG_STATE_HOME:-$HOME/.local/state}/archontropic"
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/archonthropic"
 
 remove_shortcut() { # $1 = keybinding id
   command -v gsettings >/dev/null || return 0
@@ -21,9 +21,9 @@ remove_shortcut() { # $1 = keybinding id
 # setup.sh uses this to clear the old name's shortcut
 if [ "${1:-}" = --shortcut-only ]; then remove_shortcut "$2"; exit 0; fi
 
-[ -f "$STATE/app.pid" ] && kill "$(cat "$STATE/app.pid")" 2>/dev/null && echo "Stopped Archontropic"
+[ -f "$STATE/app.pid" ] && kill "$(cat "$STATE/app.pid")" 2>/dev/null && echo "Stopped Archonthropic"
 node "$DIR/bin/install-hooks.js" --uninstall
-rm -f ~/.config/autostart/archontropic.desktop && echo "Removed autostart entry"
-remove_shortcut archontropic
+rm -f ~/.config/autostart/archonthropic.desktop && echo "Removed autostart entry"
+remove_shortcut archonthropic
 rm -rf "$STATE"
-echo "Archontropic uninstalled."
+echo "Archonthropic uninstalled."

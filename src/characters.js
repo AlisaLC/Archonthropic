@@ -563,5 +563,5 @@
 
   const api = { ROSTER, STATES, PAIMON, SYS_STATES, ELEMENTS, drawCharacter, shade };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.Archontropic = api;
+  else root.Archonthropic = api;
 })(typeof window !== 'undefined' ? window : globalThis);

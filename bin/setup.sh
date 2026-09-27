@@ -18,20 +18,22 @@ done
 
 step() { printf '\n\033[1;35m==> %s\033[0m\n' "$1"; }
 
-[ "$(uname -s)" = Linux ] || { echo "Archontropic only runs on Linux for now." >&2; exit 1; }
+[ "$(uname -s)" = Linux ] || { echo "Archonthropic only runs on Linux for now." >&2; exit 1; }
 command -v node >/dev/null || { echo "Node.js 20+ is required (https://nodejs.org or nvm)." >&2; exit 1; }
 NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]')
 [ "$NODE_MAJOR" -ge 20 ] || { echo "Node.js 20+ is required (found $(node -v))." >&2; exit 1; }
 [ -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ] || echo "note: ~/.claude not found; run Claude Code once first, or the hooks go into a fresh settings file."
 
-# Clean up after the project's old name (genshinclaude): stop it, drop its autostart entry and shortcut.
-OLD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/genshinclaude"
-if [ -d "$OLD_STATE" ] || [ -f ~/.config/autostart/genshinclaude.desktop ]; then
-  step "Migrating from genshinclaude"
-  [ -f "$OLD_STATE/app.pid" ] && kill "$(cat "$OLD_STATE/app.pid")" 2>/dev/null && sleep 1
-  rm -rf "$OLD_STATE" ~/.config/autostart/genshinclaude.desktop
-  "$DIR/bin/uninstall.sh" --shortcut-only genshinclaude
-fi
+# Clean up after the project's old names: stop the old app, drop its autostart entry and shortcut.
+for OLD in genshinclaude archontropic; do
+  OLD_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/$OLD"
+  if [ -d "$OLD_STATE" ] || [ -f ~/.config/autostart/$OLD.desktop ]; then
+    step "Migrating from $OLD"
+    [ -f "$OLD_STATE/app.pid" ] && kill "$(cat "$OLD_STATE/app.pid")" 2>/dev/null && sleep 1
+    rm -rf "$OLD_STATE" ~/.config/autostart/$OLD.desktop
+    "$DIR/bin/uninstall.sh" --shortcut-only $OLD
+  fi
+done
 
 step "Installing Electron"
 npm install --no-fund --no-audit
@@ -54,7 +56,7 @@ if [ "$AUTOSTART" = 1 ]; then
 fi
 
 step "Launching"
-PID_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/archontropic/app.pid"
+PID_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/archonthropic/app.pid"
 if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
   kill "$(cat "$PID_FILE")"; sleep 1 # restart so it picks up the new code
 fi

@@ -3,7 +3,7 @@
 .grid{display:grid;grid-template-columns:70px repeat(14,90px);gap:2px}.cell svg{width:90px;height:112px}.h{font-weight:700;align-self:center}
 .stage,.chibi *{animation:none!important}</style></head>
 <body><div class="grid" id="g"></div><script src="../src/characters.js"></script><script>
-const {ROSTER,STATES,PAIMON,SYS_STATES,drawCharacter}=Archontropic;const g=document.getElementById('g');
+const {ROSTER,STATES,PAIMON,SYS_STATES,drawCharacter}=Archonthropic;const g=document.getElementById('g');
 g.insertAdjacentHTML('beforeend','<div></div>'+Object.keys(STATES).map(k=>`<div class=h>${k}</div>`).join(''));
 const sz=+(new URLSearchParams(location.search).get("s")||90);document.head.insertAdjacentHTML("beforeend",`<style>.cell svg{width:${sz}px;height:${sz*1.25}px}.grid{grid-template-columns:70px repeat(14,${sz}px)}</style>`);const only=new URLSearchParams(location.search).get('c');
 for(const c of ROSTER.filter(c=>!only||only.split(',').includes(c.id))){g.insertAdjacentHTML('beforeend',`<div class=h>${c.name}</div>`+Object.keys(STATES).map(k=>`<div class=cell>${drawCharacter(c,k)}</div>`).join(''));}

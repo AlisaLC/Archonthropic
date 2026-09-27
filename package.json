@@ -1,5 +1,5 @@
 {
-  "name": "archontropic",
+  "name": "archonthropic",
   "version": "0.1.0",
   "description": "Floating Genshin-style chibi companions that show what each Claude Code session is doing",
   "main": "src/main.js",

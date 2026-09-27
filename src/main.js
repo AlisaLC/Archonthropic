@@ -1,6 +1,6 @@
 'use strict';
-// Archontropic — a strip of chibi companions on the right edge of a monitor,
-// one per live Claude Code session. The hook (hooks/archontropic-hook.js) writes
+// Archonthropic — a strip of chibi companions on the right edge of a monitor,
+// one per live Claude Code session. The hook (hooks/archonthropic-hook.js) writes
 // <session>.json files; we watch them and render everything in one window.
 
 const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, clipboard } = require('electron');
@@ -14,19 +14,21 @@ const { ROSTER, STATES } = require('./characters');
 app.commandLine.appendSwitch('ozone-platform', 'x11');
 app.commandLine.appendSwitch('enable-transparent-visuals');
 
-const BASE_DIR = path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'archontropic');
-const STATE_DIR = process.env.ARCHONTROPIC_DIR || path.join(BASE_DIR, 'sessions');
+const BASE_DIR = path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'archonthropic');
+const STATE_DIR = process.env.ARCHONTHROPIC_DIR || path.join(BASE_DIR, 'sessions');
 const PID_FILE = path.join(BASE_DIR, 'app.pid');
-const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'archontropic');
+const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'archonthropic');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const SPRITE_DIR = path.join(CONFIG_DIR, 'sprites');
 
-// Carry settings and custom sprites over from the project's old name (genshinclaude).
+// Carry settings and custom sprites over from the project's old names.
 (function migrate() {
-  const old = path.join(path.dirname(CONFIG_DIR), 'genshinclaude');
-  for (const name of ['config.json', 'sprites']) {
-    const from = path.join(old, name), to = path.join(CONFIG_DIR, name);
-    try { if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true }); } catch {}
+  for (const oldName of ['archontropic', 'genshinclaude']) {
+    const old = path.join(path.dirname(CONFIG_DIR), oldName);
+    for (const name of ['config.json', 'sprites']) {
+      const from = path.join(old, name), to = path.join(CONFIG_DIR, name);
+      try { if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true }); } catch {}
+    }
   }
 })();
 
@@ -83,7 +85,7 @@ function assignCharacter(d) {
   return pick;
 }
 
-// Optional user art: ~/.config/archontropic/sprites/<character>/<state>.png (or default.png)
+// Optional user art: ~/.config/archonthropic/sprites/<character>/<state>.png (or default.png)
 function customSprite(characterId, stateKey) {
   for (const name of [stateKey, 'default']) {
     for (const ext of ['png', 'gif', 'webp', 'svg', 'jpg']) {
@@ -294,7 +296,7 @@ function createWindow() {
     // so an above-state strip made full-screen windows on this monitor (e.g. Telegram's photo viewer)
     // open in the background.
     type: 'dock', transparent: true, backgroundColor: '#00000000', frame: false, hasShadow: false,
-    resizable: false, alwaysOnTop: false, skipTaskbar: true, show: false, title: 'Archontropic',
+    resizable: false, alwaysOnTop: false, skipTaskbar: true, show: false, title: 'Archonthropic',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false, backgroundThrottling: false,
@@ -411,7 +413,7 @@ function commonMenu() {
     },
     { type: 'separator' },
     { label: 'Open custom sprites folder', click: () => { fs.mkdirSync(SPRITE_DIR, { recursive: true }); shell.openPath(SPRITE_DIR); } },
-    { label: 'Quit Archontropic', click: () => app.quit() },
+    { label: 'Quit Archonthropic', click: () => app.quit() },
   ];
 }
 
