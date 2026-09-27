@@ -43,19 +43,17 @@ function makeSlot(id) {
 }
 
 function renderSlot(slot) {
-  const { session: s, characterId, stateKey, sprite } = slot.item;
+  const { session: s, characterId, stateKey } = slot.item;
   const ch = ROSTER.find((c) => c.id === characterId) || ROSTER[0];
   const st = STATES[stateKey] || STATES.ready;
   const el = slot.el;
   el.style.setProperty('--accent', st.color);
   el.classList.toggle('attention', !!st.attention);
 
-  const key = `${ch.id}|${stateKey}|${sprite || ''}`;
+  const key = `${ch.id}|${stateKey}`;
   if (key !== slot.drawnKey) {
     slot.drawnKey = key;
-    el.querySelector('.sprite').innerHTML = sprite
-      ? `<img class="custom" src="${esc(sprite)}"><div class="fx-overlay">${drawCharacter(ch, stateKey, { fxOnly: true })}</div>`
-      : drawCharacter(ch, stateKey);
+    el.querySelector('.sprite').innerHTML = drawCharacter(ch, stateKey);
   }
   // After the first ~20s of "done", calm the hopping down to a gentle bob.
   const stage = el.querySelector('.stage');

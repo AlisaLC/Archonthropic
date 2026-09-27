@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Archonthropic · Spawn list</title>
+  <link rel="stylesheet" href="spawn.css">
+</head>
+<body>
+  <header>
+    <div class="top">
+      <input id="q" type="search" placeholder="Search characters…  ( / )" autocomplete="off" spellcheck="false" autofocus>
+      <div class="seg" id="show">
+        <button data-show="all" class="on">All</button><button data-show="in">In list</button><button data-show="out">Left out</button>
+      </div>
+    </div>
+    <div class="chips" id="elements"></div>
+    <div class="picked" id="picked"></div>
+  </header>
+  <main id="grid"></main>
+  <footer>
+    <div class="bulk">
+      <button id="add-shown">Add shown</button>
+      <button id="remove-shown">Remove shown</button>
+      <button id="clear">Clear all</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="actions">
+      <button id="cancel">Cancel</button>
+      <button id="save" class="primary">Save</button>
+    </div>
+  </footer>
+  <script src="../characters.js"></script>
+  <script src="spawn.js"></script>
+</body>
+</html>

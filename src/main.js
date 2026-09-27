@@ -3,12 +3,11 @@
 // one per live Claude Code session. The hook (hooks/archonthropic-hook.js) writes
 // <session>.json files; we watch them and render everything in one window.
 
-const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, clipboard } = require('electron');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { pathToFileURL } = require('url');
-const { ROSTER, STATES } = require('./characters');
+const { ROSTER, STATES, ELEMENTS } = require('./characters');
 
 // X11 (XWayland) so the window can be positioned and kept above others on GNOME Wayland.
 app.commandLine.appendSwitch('ozone-platform', 'x11');
@@ -19,22 +18,20 @@ const STATE_DIR = process.env.ARCHONTHROPIC_DIR || path.join(BASE_DIR, 'sessions
 const PID_FILE = path.join(BASE_DIR, 'app.pid');
 const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'archonthropic');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
-const SPRITE_DIR = path.join(CONFIG_DIR, 'sprites');
 
-// Carry settings and custom sprites over from the project's old names.
+// Carry settings over from the project's old names.
 (function migrate() {
   for (const oldName of ['archontropic', 'genshinclaude']) {
     const old = path.join(path.dirname(CONFIG_DIR), oldName);
-    for (const name of ['config.json', 'sprites']) {
-      const from = path.join(old, name), to = path.join(CONFIG_DIR, name);
-      try { if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true }); } catch {}
-    }
+    const from = path.join(old, 'config.json');
+    try { if (fs.existsSync(from) && !fs.existsSync(CONFIG_FILE)) fs.cpSync(from, CONFIG_FILE); } catch {}
   }
 })();
 
 // display: "secondary" (first non-primary monitor, falls back to primary), "primary", or a display index.
 // systemMonitor: Paimon at the top of the strip reporting CPU / memory / disk; disks: mount points she watches.
-const DEFAULTS = { display: 'secondary', scale: 1, idleAfterMinutes: 5, assignments: {}, systemMonitor: true, disks: ['/'] };
+// banned: character ids never handed out to new sessions.
+const DEFAULTS = { display: 'secondary', scale: 1, idleAfterMinutes: 5, assignments: {}, systemMonitor: true, disks: ['/'], banned: [] };
 let config = { ...DEFAULTS };
 try { config = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; } catch {}
 const saveConfig = () => {
@@ -71,29 +68,26 @@ function hash(str) {
   return h >>> 0;
 }
 
+// Characters new sessions may get (everyone, if the user banned the whole roster).
+function spawnPool() {
+  const pool = ROSTER.filter((c) => !config.banned.includes(c.id));
+  return pool.length ? pool : ROSTER;
+}
+
+// A project keeps the character it had last time; otherwise the project path picks a free one from the pool.
 function assignCharacter(d) {
   const taken = new Set([...sessions.values()].map((s) => s.characterId));
-  const pref = ROSTER.some((c) => c.id === config.assignments[d.cwd]) ? config.assignments[d.cwd] : null;
+  const pool = spawnPool();
+  const pref = pool.some((c) => c.id === config.assignments[d.cwd]) ? config.assignments[d.cwd] : null;
   if (pref && !taken.has(pref)) return pref;
-  const start = hash(d.cwd || d.session_id) % ROSTER.length;
-  let pick = ROSTER[start].id;
-  for (let i = 0; i < ROSTER.length; i++) {
-    const c = ROSTER[(start + i) % ROSTER.length];
+  const start = hash(d.cwd || d.session_id) % pool.length;
+  let pick = pool[start].id;
+  for (let i = 0; i < pool.length; i++) {
+    const c = pool[(start + i) % pool.length];
     if (!taken.has(c.id)) { pick = c.id; break; }
   }
   if (!pref && d.cwd && !d.cwd.startsWith(os.tmpdir())) { config.assignments[d.cwd] = pick; saveConfig(); }
   return pick;
-}
-
-// Optional user art: ~/.config/archonthropic/sprites/<character>/<state>.png (or default.png)
-function customSprite(characterId, stateKey) {
-  for (const name of [stateKey, 'default']) {
-    for (const ext of ['png', 'gif', 'webp', 'svg', 'jpg']) {
-      const f = path.join(SPRITE_DIR, characterId, `${name}.${ext}`);
-      if (fs.existsSync(f)) return pathToFileURL(f).href;
-    }
-  }
-  return null;
 }
 
 const BOOT_TIME = (() => {
@@ -168,7 +162,7 @@ function push(force = false) {
   if (!win || win.isDestroyed() || !win.ready) return;
   const list = [...sessions.values()]
     .sort((a, b) => a.data.started_at - b.data.started_at || a.id.localeCompare(b.id))
-    .map((s) => ({ session: s.data, characterId: s.characterId, stateKey: s.stateKey, sprite: customSprite(s.characterId, s.stateKey) }));
+    .map((s) => ({ session: s.data, characterId: s.characterId, stateKey: s.stateKey }));
   const json = JSON.stringify({ list, hidden });
   if (json === lastPayload && !force) return;
   lastPayload = json;
@@ -360,7 +354,7 @@ ipcMain.on('menu', (_e, id) => {
     { type: 'separator' },
     {
       label: 'Change character',
-      submenu: ROSTER.map((c) => ({
+      submenu: byElement(spawnPool(), (c) => ({
         label: c.name, type: 'radio', checked: c.id === s.characterId,
         click: () => {
           s.characterId = c.id;
@@ -374,6 +368,50 @@ ipcMain.on('menu', (_e, id) => {
     ...commonMenu(),
   ]).popup({ window: win });
 });
+
+// One submenu per element, so the long roster stays browsable.
+function byElement(list, item) {
+  return Object.keys(ELEMENTS)
+    .map((el) => ({ label: el, submenu: list.filter((c) => c.element === el).sort((a, b) => a.name.localeCompare(b.name)).map(item) }))
+    .filter((m) => m.submenu.length);
+}
+
+// Replace the ban list. Banned characters leave every project and live session that had them.
+function setBanned(list) {
+  config.banned = [...new Set(list)].filter((id) => ROSTER.some((c) => c.id === id));
+  if (config.banned.length >= ROSTER.length) config.banned = []; // an empty spawn list means everyone
+  for (const [cwd, cid] of Object.entries(config.assignments)) if (config.banned.includes(cid)) delete config.assignments[cwd];
+  for (const s of sessions.values()) {
+    if (!config.banned.includes(s.characterId)) continue;
+    s.characterId = null;
+    s.characterId = assignCharacter(s.data);
+  }
+  saveConfig();
+  push();
+}
+
+// The spawn-list editor: a small searchable window for choosing who new sessions can get.
+let spawnWin = null;
+function openSpawnList() {
+  if (spawnWin && !spawnWin.isDestroyed()) { spawnWin.show(); spawnWin.focus(); return; }
+  spawnWin = new BrowserWindow({
+    width: 900, height: 680, minWidth: 560, minHeight: 420, title: 'Archonthropic · Spawn list',
+    backgroundColor: '#1f1c2e', autoHideMenuBar: true, show: false,
+    webPreferences: { preload: path.join(__dirname, 'spawn-preload.js'), contextIsolation: true, nodeIntegration: false },
+  });
+  spawnWin.setMenu(null);
+  spawnWin.loadFile(path.join(__dirname, 'renderer', 'spawn.html'));
+  spawnWin.once('ready-to-show', () => spawnWin.show());
+  spawnWin.on('closed', () => { spawnWin = null; });
+}
+ipcMain.handle('spawn:get', () => ({ banned: config.banned }));
+ipcMain.on('spawn:set', (e, banned) => {
+  if (!spawnWin || e.sender !== spawnWin.webContents || !Array.isArray(banned)) return;
+  setBanned(banned);
+  spawnWin.close();
+});
+ipcMain.on('spawn:close', (e) => { if (spawnWin && e.sender === spawnWin.webContents) spawnWin.close(); });
+
 
 // ---------------------------------------------------------------- tray
 
@@ -411,8 +449,8 @@ function commonMenu() {
         })),
       ],
     },
+    { label: 'Spawn list…', click: openSpawnList },
     { type: 'separator' },
-    { label: 'Open custom sprites folder', click: () => { fs.mkdirSync(SPRITE_DIR, { recursive: true }); shell.openPath(SPRITE_DIR); } },
     { label: 'Quit Archonthropic', click: () => app.quit() },
   ];
 }

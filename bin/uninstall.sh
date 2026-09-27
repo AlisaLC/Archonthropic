@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Undo bin/setup.sh: stop the app and remove the hooks, shortcut and autostart entry.
-# Your config (~/.config/archonthropic) and custom sprites are kept; delete that folder too if you like.
+# Your config (~/.config/archonthropic) is kept; delete that folder too if you like.
 set -uo pipefail
 DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/archonthropic"

@@ -82,16 +82,20 @@ bin/start.sh                    # background; `npm start` runs it in the foregro
 - `scale`: size multiplier, e.g. `1.3`
 - `idleAfterMinutes`: when "your turn" turns into "asleep" (default 5)
 - `assignments`: project directory → character id
+- `banned`: character ids never handed out (the **Spawn list…** window edits this)
 - `systemMonitor`: show Paimon (default `true`; also a checkbox in the tray menu)
 - `disks`: mount points Paimon watches (default `["/"]`, e.g. `["/", "/home", "/mnt/data"]`)
 
-### Your own art
+### Characters
 
-The built-in characters (Raiden, Nahida, Hu Tao, Ganyu, Yae Miko, Ayaka, Furina, Yelan) are original SVG chibis, each drawn with its own hair, accessories, eyes and outfit. To use your
-own images (for example Genshin sticker PNGs you've saved), drop them into
-`~/.config/archonthropic/sprites/<character-id>/<state>.png`, with `default.png` as the fallback. Speech
-bubbles are still drawn on top. Character ids: `raiden nahida hutao ganyu yae ayaka furina yelan`.
-States: `ready thinking bash editing reading web agent planning tool permission question done idle compacting`.
+The 81 built-in characters (every playable woman in Genshin, plus Lumine) are original SVG chibis, each drawn with
+its own hair, accessories, eyes and outfit. A project keeps the character it got the first time; a new project gets
+one picked from its path, skipping characters already on screen. Right-click a character to swap it (the choice
+sticks for that project). To choose who can spawn, open **Spawn list…** from the right-click or tray menu: a
+searchable window with every character, filterable by element. Tick the ones you want (or **Clear all** and pick a
+few), then **Save**. Characters you leave out stop being handed out, and any project or open session that had one
+gets someone else. Keys: `/` search, `Enter` toggles the top match, `Ctrl+S` saves, `Esc` clears or closes.
+Character ids: `raiden nahida hutao ganyu yae ayaka furina yelan aino aloy amber arlecchino barbara beidou candace charlotte chasca chevreuse chiori citlali clorinde collei columbina dehya diona dori emilie escoffier eula faruzan fischl iansan ineffa jahoda jean kachina keqing kirara klee kokomi kuki lanyan lauma layla linnea lisa lynette mavuika mona mualani navia nefer nicole nilou ningguang noelle odette prune qiqi rosaria sandrone sara sayu shenhe sigewinne skirk sucrose lumine varesa vesna vodyanitsa xiangling xianyun xilonen xinyan yanfei yaoyao yoimiya mizuki yunjin zibai`.
 
 ## How it works
 

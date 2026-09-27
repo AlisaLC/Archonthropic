@@ -18,9 +18,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
 @keyframes enter { from { transform: translateY(30px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .sprite-wrap { position: relative; width: 120px; height: 150px; flex: none; }
-.sprite, .sprite svg, .sprite img { width: 120px; height: 150px; display: block; }
-.sprite img.custom { object-fit: contain; animation: bob 2.4s ease-in-out infinite; }
-.sprite .fx-overlay { position: absolute; inset: 0; }
+.sprite, .sprite svg { width: 120px; height: 150px; display: block; }
 
 .aura { position: absolute; left: 50%; bottom: 0; width: 96px; height: 26px; transform: translateX(-50%);
   border-radius: 50%; background: radial-gradient(closest-side, var(--accent), transparent); opacity: 0; }
