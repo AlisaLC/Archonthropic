@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../src/renderer/style.css">
+<style>html,body{overflow:visible;height:auto;background:#2b2840}body{padding:10px;color:#eee;font:11px sans-serif}
+.grid{display:grid;grid-template-columns:70px repeat(14,90px);gap:2px}.cell svg{width:90px;height:112px}.h{font-weight:700;align-self:center}
+.stage,.chibi *{animation:none!important}</style></head>
+<body><div class="grid" id="g"></div><script src="../src/characters.js"></script><script>
+const {ROSTER,STATES,PAIMON,SYS_STATES,drawCharacter}=GenshinClaude;const g=document.getElementById('g');
+g.insertAdjacentHTML('beforeend','<div></div>'+Object.keys(STATES).map(k=>`<div class=h>${k}</div>`).join(''));
+const sz=+(new URLSearchParams(location.search).get("s")||90);document.head.insertAdjacentHTML("beforeend",`<style>.cell svg{width:${sz}px;height:${sz*1.25}px}.grid{grid-template-columns:70px repeat(14,${sz}px)}</style>`);const only=new URLSearchParams(location.search).get('c');
+for(const c of ROSTER.filter(c=>!only||only.split(',').includes(c.id))){g.insertAdjacentHTML('beforeend',`<div class=h>${c.name}</div>`+Object.keys(STATES).map(k=>`<div class=cell>${drawCharacter(c,k)}</div>`).join(''));}
+if(!only||only.split(',').includes('paimon'))g.insertAdjacentHTML('beforeend',`<div class=h>Paimon</div>`+Object.keys(SYS_STATES).map(k=>`<div class=cell>${drawCharacter(PAIMON,k,{fx:k==='strained'?'emoji:🔥':undefined})}<div>${k}</div></div>`).join(''));
+</script></body></html>

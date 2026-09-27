@@ -1,0 +1,18 @@
+{
+  "name": "genshinclaude",
+  "version": "0.1.0",
+  "description": "Floating Genshin-style chibi companions that show what each Claude Code session is doing",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron . --no-sandbox --ozone-platform=x11",
+    "install-hooks": "node bin/install-hooks.js",
+    "uninstall-hooks": "node bin/install-hooks.js --uninstall",
+    "demo": "node bin/demo.js"
+  },
+  "engines": { "node": ">=20" },
+  "os": ["linux"],
+  "devDependencies": {
+    "electron": "^44.4.5"
+  }
+}

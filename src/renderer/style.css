@@ -1,0 +1,108 @@
+:root { --accent: #b69cff; --elem: #fff; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none;
+  font-family: "Noto Sans", "Ubuntu", system-ui, sans-serif; }
+#strip { position: absolute; inset: 0; }
+#strip.hidden, #strip.hidden ~ #card { display: none; }
+
+.slot { position: absolute; width: 136px; height: 192px; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-end; transition: right .4s ease, bottom .4s ease; }
+.slot.sys { height: 218px; transition: none; }
+.slot.sys .label { width: 124px; }
+.gauges { margin-top: 1px; }
+.gauge { display: flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 700; color: #cfc8ef; line-height: 13px; }
+.gauge .gk { width: 24px; text-align: left; }
+.gauge .bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+.gauge .bar i { display: block; height: 100%; border-radius: 3px; transition: width .6s ease, background .6s; }
+.gauge .gv { width: 26px; text-align: right; font-variant-numeric: tabular-nums; }
+.slot.enter { animation: enter .45s cubic-bezier(.3,1.5,.5,1); }
+@keyframes enter { from { transform: translateY(30px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.sprite-wrap { position: relative; width: 120px; height: 150px; flex: none; }
+.sprite, .sprite svg, .sprite img { width: 120px; height: 150px; display: block; }
+.sprite img.custom { object-fit: contain; animation: bob 2.4s ease-in-out infinite; }
+.sprite .fx-overlay { position: absolute; inset: 0; }
+
+.aura { position: absolute; left: 50%; bottom: 0; width: 96px; height: 26px; transform: translateX(-50%);
+  border-radius: 50%; background: radial-gradient(closest-side, var(--accent), transparent); opacity: 0; }
+.attention .aura { animation: aura 1.4s ease-in-out infinite; }
+@keyframes aura { 0%,100% { opacity: .25; transform: translateX(-50%) scale(.85); } 50% { opacity: .75; transform: translateX(-50%) scale(1.15); } }
+
+.label { margin-top: -4px; max-width: 132px; box-sizing: border-box; padding: 2px 8px 3px; border-radius: 9px; text-align: center; line-height: 1.15;
+  background: rgba(22, 20, 36, .85); border: 1.5px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.proj { font-size: 11px; font-weight: 700; color: #f3efff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.state { font-size: 10px; font-weight: 600; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#card { position: absolute; display: none; width: 252px; box-sizing: border-box; padding: 9px 11px; border-radius: 12px;
+  color: #ece8ff; font-size: 11.5px; line-height: 1.4;
+  background: linear-gradient(160deg, rgba(38, 34, 62, .97), rgba(24, 22, 40, .97));
+  border: 1.5px solid #d9c38a; box-shadow: 0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06); }
+#card.show { display: block; animation: pop .15s ease-out; }
+#card .name { font-size: 13.5px; font-weight: 800; color: #f7e3a8; display: flex; align-items: center; gap: 6px; }
+#card .elem { width: 9px; height: 9px; transform: rotate(45deg); background: var(--elem); border: 1px solid #fff8; }
+#card .row { display: flex; gap: 6px; margin-top: 3px; }
+#card .k { color: #a59dc8; flex: none; width: 54px; }
+#card .v { word-break: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+#card .st { color: var(--accent); font-weight: 700; }
+#card .hint { margin-top: 6px; color: #7f78a6; font-size: 10px; }
+
+@keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- character animation ---------- */
+.chibi { overflow: visible; }
+.chibi .stage, .chibi .body-group, .chibi .blink, .chibi .wave-arm, .chibi .cheer-arm, .chibi .sparkle, .chibi .fx-pop, .chibi .fx-float {
+  transform-box: fill-box; transform-origin: center; }
+.chibi .stage { transform-origin: 50% 100%; }
+.chibi .shadow { transform-box: fill-box; transform-origin: center; }
+
+.anim-bob       { animation: bob 2.4s ease-in-out infinite; }
+.anim-bob-fast  { animation: bob 0.55s ease-in-out infinite; }
+.anim-hop       { animation: hop 0.9s cubic-bezier(.3,.7,.4,1) infinite; }
+.anim-jump      { animation: jump 0.6s ease-in-out infinite; }
+.anim-tilt      { animation: tilt 2.2s ease-in-out infinite; }
+.anim-sway      { animation: sway 4s ease-in-out infinite; }
+.anim-float     { animation: float 2.6s ease-in-out infinite; }
+.anim-float-fast { animation: float 1.1s ease-in-out infinite; }
+.chibi .halo    { transform-box: fill-box; transform-origin: center; animation: halo 3s ease-in-out infinite; }
+@keyframes halo { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+.anim-wobble    { animation: wobble 1.2s ease-in-out infinite; }
+.floats         { animation-name: float; animation-duration: 2.6s; }
+.calm.anim-hop  { animation: bob 1.8s ease-in-out infinite; }
+
+@keyframes bob    { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes float  { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(-12px); } }
+@keyframes hop    { 0%,100% { transform: translateY(0) scale(1.04, .96); } 40% { transform: translateY(-13px) scale(.97, 1.03); } 70% { transform: translateY(0) scale(1.05, .95); } }
+@keyframes jump   { 0%,100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-9px) rotate(-5deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-9px) rotate(5deg); } }
+@keyframes tilt   { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes sway   { 0%,100% { transform: rotate(-2.5deg) translateY(1px); } 50% { transform: rotate(2.5deg) translateY(0); } }
+@keyframes wobble { 0%,100% { transform: rotate(-7deg) scale(1); } 50% { transform: rotate(7deg) scale(.97); } }
+
+.chibi .blink { animation: blink 4.2s infinite; }
+@keyframes blink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+
+.chibi .wave-arm { transform-origin: 30% 100%; animation: wave .7s ease-in-out infinite alternate; }
+@keyframes wave { from { transform: rotate(-12deg); } to { transform: rotate(16deg); } }
+.chibi .cheer-arm { transform-origin: 30% 100%; animation: cheer .45s ease-in-out infinite alternate; }
+@keyframes cheer { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+
+.chibi .fx-pop { animation: fxpop 1s ease-in-out infinite; }
+@keyframes fxpop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.chibi .fx-float { animation: fxfloat 2.2s ease-in-out infinite; }
+@keyframes fxfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.chibi .dot { animation: dot 1.2s infinite; }
+.chibi .d2 { animation-delay: .2s; } .chibi .d3 { animation-delay: .4s; }
+@keyframes dot { 0%,60%,100% { opacity: .25; } 30% { opacity: 1; } }
+
+.chibi .cursor { animation: cursor 1s steps(1) infinite; }
+@keyframes cursor { 50% { opacity: 0; } }
+
+.chibi .sparkle { animation: twinkle 1.3s ease-in-out infinite; }
+.chibi .s1 { animation-delay: .3s; } .chibi .s2 { animation-delay: .6s; } .chibi .s3 { animation-delay: .9s; } .chibi .s4 { animation-delay: .45s; }
+@keyframes twinkle { 0%,100% { transform: scale(.3) rotate(0); opacity: .3; } 50% { transform: scale(1.1) rotate(45deg); opacity: 1; } }
+
+.chibi .z { animation: zz 3s ease-in-out infinite; opacity: 0; }
+.chibi .z2 { animation-delay: 1s; } .chibi .z3 { animation-delay: 2s; }
+@keyframes zz { 0% { opacity: 0; transform: translate(-4px, 6px); } 30%,70% { opacity: 1; } 100% { opacity: 0; transform: translate(4px, -6px); } }
+
+.chibi .sweat { animation: sweat 1.6s ease-in infinite; }
+@keyframes sweat { 0% { transform: translateY(-2px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(6px); opacity: 0; } }

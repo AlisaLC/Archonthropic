@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Start genshinclaude automatically when you log in (remove the file to undo).
+DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/genshinclaude.desktop <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=genshinclaude
+Comment=Genshin companions for your Claude Code sessions
+Exec=$DIR/bin/start.sh
+X-GNOME-Autostart-enabled=true
+DESKTOP
+echo "Autostart installed: ~/.config/autostart/genshinclaude.desktop"
