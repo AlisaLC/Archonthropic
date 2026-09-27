@@ -289,10 +289,12 @@ function stripBounds() {
 function createWindow() {
   win = new BrowserWindow({
     ...stripBounds(),
-    // "toolbar" keeps it out of the dock/alt-tab; shown once normally (not inactive) so
-    // Mutter doesn't flag it as demanding attention, then made unfocusable.
-    type: 'toolbar', transparent: true, backgroundColor: '#00000000', frame: false, hasShadow: false,
-    resizable: false, alwaysOnTop: true, skipTaskbar: true, show: false, title: 'Archontropic',
+    // A "dock" window: stays above normal windows through Mutter's dock layer, out of the dock/alt-tab,
+    // and never always-on-top. Mutter won't focus a new window that an always-on-top window overlaps,
+    // so an above-state strip made full-screen windows on this monitor (e.g. Telegram's photo viewer)
+    // open in the background.
+    type: 'dock', transparent: true, backgroundColor: '#00000000', frame: false, hasShadow: false,
+    resizable: false, alwaysOnTop: false, skipTaskbar: true, show: false, title: 'Archontropic',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false, backgroundThrottling: false,
@@ -303,15 +305,13 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => {
     win.ready = true;
-    win.show();
-    setTimeout(() => {
+    // Mark it unfocusable before it's first mapped, so GNOME never gives it focus (not even at startup).
+    refuseFocus(() => {
       if (win.isDestroyed()) return;
+      win.show();
       win.setFocusable(false);
-      win.setAlwaysOnTop(true, 'screen-saver');
       win.setVisibleOnAllWorkspaces(true);
-      win.blur();
-      refuseFocus();
-    }, 300);
+    });
     push(true);
     lastSys = '';
     pushSys();
@@ -320,14 +320,13 @@ function createWindow() {
 }
 
 // Electron's setFocusable(false) doesn't set WM_HINTS on X11, so GNOME still treats the strip as a window
-// that can hold keyboard focus. It's sticky and always on top, so Mutter could hand it focus, and new
-// windows from other apps (e.g. Telegram's photo viewer) would then open in the background.
+// that can hold keyboard focus: it grabbed focus at startup, swallowing your first keystrokes.
 // Set the ICCCM input hint to false (flags = InputHint, input = 0) so it's never focused.
-function refuseFocus() {
+function refuseFocus(then) {
   const handle = win.getNativeWindowHandle();
   const xid = handle.length >= 8 ? Number(handle.readBigUInt64LE(0)) : handle.readUInt32LE(0);
   require('child_process').execFile('python3', [path.join(__dirname, '..', 'bin', 'x11-nofocus.py'), String(xid)],
-    (err) => { if (err) console.warn('could not set WM_HINTS:', err.message); });
+    (err) => { if (err) console.warn('could not set WM_HINTS:', err.message); then(); });
 }
 
 function reposition() {

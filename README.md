@@ -98,12 +98,13 @@ States: `ready thinking bash editing reading web agent planning tool permission 
 `hooks/archontropic-hook.js` runs on SessionStart/End, UserPromptSubmit, Pre/PostToolUse, Notification,
 Stop and PreCompact. It writes `~/.local/state/archontropic/sessions/<id>.json` and records the
 `claude` PID, so crashed sessions disappear too. The Electron app watches that folder and draws
-everything in one transparent, always-on-top strip window, running under XWayland. The window is
+everything in one transparent strip window that stays above normal windows, running under XWayland. The window is
 shaped so that only the characters catch the mouse; everything else clicks through.
 
 Limitations: after you approve a permission prompt, the character keeps showing "needs permission"
-until the tool finishes, because Claude Code sends no event on approval. The app takes focus once at startup
-(showing it inactive makes GNOME post an "is ready" notification instead).
+until the tool finishes, because Claude Code sends no event on approval. Companions sit in a "dock" layer rather than always-on-top, so a focused full-screen window
+(a video, a photo viewer) covers them. That's deliberate: GNOME sends new windows that overlap an
+always-on-top window to the background.
 
 `tools/gallery.html` shows every character in every state. `tools/shot.js` renders it to a PNG.
 
