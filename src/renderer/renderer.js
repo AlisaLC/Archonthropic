@@ -168,16 +168,16 @@ function sessionCard(slot) {
 // Only the characters (and the card) catch the mouse; the rest of the strip is click-through.
 let lastShape = '';
 function reportShape() {
+  // Layout boxes, not getBoundingClientRect(): the enter/pop animations scale elements, and a shape
+  // measured mid-animation would clip the card's border until the next report.
+  const box = (el, [t, r, b, l] = [0, 0, 0, 0]) => {
+    const x = Math.max(0, el.offsetLeft - l), y = Math.max(0, el.offsetTop - t);
+    return { x, y, width: el.offsetLeft + el.offsetWidth + r - x, height: el.offsetTop + el.offsetHeight + b - y };
+  };
   const rects = [];
   if (!hidden) {
-    for (const slot of [...slots.values(), ...(sys ? [sys] : [])]) {
-      const r = slot.el.getBoundingClientRect();
-      rects.push({ x: Math.floor(r.left), y: Math.floor(r.top), width: Math.ceil(r.width), height: Math.ceil(r.height) });
-    }
-    if (card.classList.contains('show')) {
-      const r = card.getBoundingClientRect();
-      rects.push({ x: Math.floor(r.left), y: Math.floor(r.top), width: Math.ceil(r.width), height: Math.ceil(r.height) });
-    }
+    for (const slot of [...slots.values(), ...(sys ? [sys] : [])]) rects.push(box(slot.el));
+    if (card.classList.contains('show')) rects.push(box(card, [12, 18, 24, 18])); // room for the drop shadow
   }
   const json = JSON.stringify(rects);
   if (json !== lastShape) { lastShape = json; window.api.send('shape', rects); }
