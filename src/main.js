@@ -310,12 +310,24 @@ function createWindow() {
       win.setAlwaysOnTop(true, 'screen-saver');
       win.setVisibleOnAllWorkspaces(true);
       win.blur();
+      refuseFocus();
     }, 300);
     push(true);
     lastSys = '';
     pushSys();
   });
   win.on('closed', () => { win = null; });
+}
+
+// Electron's setFocusable(false) doesn't set WM_HINTS on X11, so GNOME still treats the strip as a window
+// that can hold keyboard focus. It's sticky and always on top, so Mutter could hand it focus, and new
+// windows from other apps (e.g. Telegram's photo viewer) would then open in the background.
+// Set the ICCCM input hint to false (flags = InputHint, input = 0) so it's never focused.
+function refuseFocus() {
+  const handle = win.getNativeWindowHandle();
+  const xid = handle.length >= 8 ? Number(handle.readBigUInt64LE(0)) : handle.readUInt32LE(0);
+  require('child_process').execFile('python3', [path.join(__dirname, '..', 'bin', 'x11-nofocus.py'), String(xid)],
+    (err) => { if (err) console.warn('could not set WM_HINTS:', err.message); });
 }
 
 function reposition() {

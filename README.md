@@ -28,7 +28,7 @@ averages, memory and swap in GiB, per-disk usage, the busiest processes and the 
 
 ## Setup
 
-**You need:** Linux (made on Ubuntu with GNOME; X11 and Wayland both work), [Node.js](https://nodejs.org) 20 or newer,
+**You need:** Linux (made on Ubuntu with GNOME; X11 and Wayland both work), [Node.js](https://nodejs.org) 20 or newer, python3 (preinstalled on Ubuntu),
 git, and [Claude Code](https://claude.com/claude-code) installed. macOS and Windows aren't supported.
 
 ```bash
