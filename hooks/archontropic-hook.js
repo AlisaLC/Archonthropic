@@ -7,8 +7,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const STATE_DIR = process.env.GENSHINCLAUDE_DIR
-  || path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'genshinclaude', 'sessions');
+const STATE_DIR = process.env.ARCHONTROPIC_DIR
+  || path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'archontropic', 'sessions');
 
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead']);
 const EDIT_TOOLS = new Set(['Edit', 'MultiEdit', 'Write', 'NotebookEdit']);

@@ -563,5 +563,5 @@
 
   const api = { ROSTER, STATES, PAIMON, SYS_STATES, ELEMENTS, drawCharacter, shade };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.GenshinClaude = api;
+  else root.Archontropic = api;
 })(typeof window !== 'undefined' ? window : globalThis);

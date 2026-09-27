@@ -7,15 +7,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const STATE_DIR = process.env.GENSHINCLAUDE_DIR
-  || path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'genshinclaude', 'sessions');
+const STATE_DIR = process.env.ARCHONTROPIC_DIR
+  || path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'archontropic', 'sessions');
 const count = Math.max(1, Math.min(12, parseInt(process.argv[2], 10) || 4));
 const SCRIPT = [
   ['ready', ''], ['thinking', ''], ['reading', 'main.js'], ['bash', 'npm test'], ['editing', 'characters.js'],
   ['thinking', ''], ['permission', 'Bash · rm -rf node_modules'], ['web', 'docs.anthropic.com'], ['agent', 'Explore the codebase'],
   ['question', ''], ['planning', ''], ['compacting', ''], ['done', ''],
 ];
-const projects = ['genshinclaude', 'teyvat-api', 'mondstadt-web', 'liyue-infra', 'inazuma-ml', 'sumeru-docs',
+const projects = ['archontropic', 'teyvat-api', 'mondstadt-web', 'liyue-infra', 'inazuma-ml', 'sumeru-docs',
   'fontaine-app', 'natlan-cli', 'snezhnaya-db', 'dotfiles', 'blog', 'playground'];
 
 fs.mkdirSync(STATE_DIR, { recursive: true });

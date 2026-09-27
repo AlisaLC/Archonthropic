@@ -4,7 +4,7 @@
 .row svg{width:300px;height:375px;background:#3a3650}</style></head>
 <body><div id="g"></div><script src="../src/characters.js"></script><script>
 // Reference icons live outside the repo; pass ?ref=/abs/dir. Names follow enka's UI_AvatarIcon_<Name>.png.
-const {ROSTER:R,PAIMON,drawCharacter}=GenshinClaude;const ROSTER=[...R,PAIMON];const q=new URLSearchParams(location.search);
+const {ROSTER:R,PAIMON,drawCharacter}=Archontropic;const ROSTER=[...R,PAIMON];const q=new URLSearchParams(location.search);
 const REF={raiden:'Shougun',nahida:'Nahida',hutao:'Hutao',ganyu:'Ganyu',yae:'Yae',ayaka:'Ayaka',furina:'Furina',yelan:'Yelan',paimon:'Paimon'};
 const only=q.get('c'),st=q.get('st')||'ready',dir=q.get('ref');
 for(const c of ROSTER.filter(c=>!only||only.split(',').includes(c.id)))

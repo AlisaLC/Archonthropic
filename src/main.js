@@ -1,6 +1,6 @@
 'use strict';
-// genshinclaude — a strip of chibi companions on the right edge of a monitor,
-// one per live Claude Code session. The hook (hooks/claude-hook.js) writes
+// Archontropic — a strip of chibi companions on the right edge of a monitor,
+// one per live Claude Code session. The hook (hooks/archontropic-hook.js) writes
 // <session>.json files; we watch them and render everything in one window.
 
 const { app, BrowserWindow, ipcMain, screen, Menu, Tray, nativeImage, shell, clipboard } = require('electron');
@@ -14,12 +14,21 @@ const { ROSTER, STATES } = require('./characters');
 app.commandLine.appendSwitch('ozone-platform', 'x11');
 app.commandLine.appendSwitch('enable-transparent-visuals');
 
-const BASE_DIR = path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'genshinclaude');
-const STATE_DIR = process.env.GENSHINCLAUDE_DIR || path.join(BASE_DIR, 'sessions');
+const BASE_DIR = path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), '.local', 'state'), 'archontropic');
+const STATE_DIR = process.env.ARCHONTROPIC_DIR || path.join(BASE_DIR, 'sessions');
 const PID_FILE = path.join(BASE_DIR, 'app.pid');
-const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'genshinclaude');
+const CONFIG_DIR = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'archontropic');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const SPRITE_DIR = path.join(CONFIG_DIR, 'sprites');
+
+// Carry settings and custom sprites over from the project's old name (genshinclaude).
+(function migrate() {
+  const old = path.join(path.dirname(CONFIG_DIR), 'genshinclaude');
+  for (const name of ['config.json', 'sprites']) {
+    const from = path.join(old, name), to = path.join(CONFIG_DIR, name);
+    try { if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true }); } catch {}
+  }
+})();
 
 // display: "secondary" (first non-primary monitor, falls back to primary), "primary", or a display index.
 // systemMonitor: Paimon at the top of the strip reporting CPU / memory / disk; disks: mount points she watches.
@@ -74,7 +83,7 @@ function assignCharacter(d) {
   return pick;
 }
 
-// Optional user art: ~/.config/genshinclaude/sprites/<character>/<state>.png (or default.png)
+// Optional user art: ~/.config/archontropic/sprites/<character>/<state>.png (or default.png)
 function customSprite(characterId, stateKey) {
   for (const name of [stateKey, 'default']) {
     for (const ext of ['png', 'gif', 'webp', 'svg', 'jpg']) {
@@ -283,7 +292,7 @@ function createWindow() {
     // "toolbar" keeps it out of the dock/alt-tab; shown once normally (not inactive) so
     // Mutter doesn't flag it as demanding attention, then made unfocusable.
     type: 'toolbar', transparent: true, backgroundColor: '#00000000', frame: false, hasShadow: false,
-    resizable: false, alwaysOnTop: true, skipTaskbar: true, show: false, title: 'genshinclaude',
+    resizable: false, alwaysOnTop: true, skipTaskbar: true, show: false, title: 'Archontropic',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false, backgroundThrottling: false,
@@ -391,7 +400,7 @@ function commonMenu() {
     },
     { type: 'separator' },
     { label: 'Open custom sprites folder', click: () => { fs.mkdirSync(SPRITE_DIR, { recursive: true }); shell.openPath(SPRITE_DIR); } },
-    { label: 'Quit genshinclaude', click: () => app.quit() },
+    { label: 'Quit Archontropic', click: () => app.quit() },
   ];
 }
 
