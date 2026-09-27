@@ -6,8 +6,13 @@ const { ROSTER, ELEMENTS, drawCharacter } = window.Archonthropic;
 const $ = (id) => document.getElementById(id);
 const byName = [...ROSTER].sort((a, b) => a.name.localeCompare(b.name));
 const picked = new Set();
+let saved = '';     // the selection as loaded, to tell whether there's anything to lose
 let element = null; // element filter, or null for all
 let show = 'all';   // all | in | out
+// Cards toggled under "In list" / "Left out" stay put until the filter or search changes,
+// so a card doesn't vanish from under the pointer (and can be clicked back).
+const sticky = new Set();
+const key = () => [...picked].sort().join();
 
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 const matches = (c, q) => !q || norm(c.name).includes(q) || c.id.includes(q) || norm(c.element) === q;
@@ -15,7 +20,7 @@ const matches = (c, q) => !q || norm(c.name).includes(q) || c.id.includes(q) || 
 function visible() {
   const q = norm($('q').value);
   return byName.filter((c) => (!element || c.element === element) && matches(c, q)
-    && (show === 'all' || (show === 'in') === picked.has(c.id)));
+    && (show === 'all' || (show === 'in') === picked.has(c.id) || sticky.has(c.id)));
 }
 
 // ---------------------------------------------------------------- build once
@@ -36,6 +41,7 @@ $('elements').addEventListener('click', (ev) => {
   const b = ev.target.closest('.chip');
   if (!b) return;
   element = b.dataset.el || null;
+  sticky.clear();
   for (const x of $('elements').children) x.classList.toggle('on', x === b);
   render();
 });
@@ -44,6 +50,7 @@ $('show').addEventListener('click', (ev) => {
   const b = ev.target.closest('button');
   if (!b) return;
   show = b.dataset.show;
+  sticky.clear();
   for (const x of $('show').children) x.classList.toggle('on', x === b);
   render();
 });
@@ -57,6 +64,7 @@ $('picked').addEventListener('click', (ev) => {
 
 function toggle(id) {
   if (picked.has(id)) picked.delete(id); else picked.add(id);
+  if (show !== 'all') sticky.add(id);
   render();
 }
 
@@ -77,9 +85,13 @@ function render() {
     : '';
 
   const n = picked.size;
-  $('status').innerHTML = n === 0 ? 'Nobody selected: <strong>everyone</strong> can spawn'
+  const dirty = key() !== saved;
+  discarding = false;
+  $('cancel').textContent = 'Cancel';
+  $('save').disabled = !dirty;
+  $('status').innerHTML = (dirty ? '<em>Unsaved</em> · ' : '') + (n === 0 ? 'Nobody selected: <strong>everyone</strong> can spawn'
     : n === ROSTER.length ? `<strong>All ${n}</strong> characters can spawn`
-    : `<strong>${n}</strong> of ${ROSTER.length} can spawn`;
+    : `<strong>${n}</strong> of ${ROSTER.length} can spawn`);
   $('add-shown').disabled = !list.some((c) => !picked.has(c.id));
   $('remove-shown').disabled = !list.some((c) => picked.has(c.id));
   $('clear').disabled = n === 0;
@@ -87,12 +99,20 @@ function render() {
 
 // ---------------------------------------------------------------- actions
 
-$('q').addEventListener('input', render);
+$('q').addEventListener('input', () => { sticky.clear(); render(); });
 $('add-shown').addEventListener('click', () => { for (const c of visible()) picked.add(c.id); render(); });
 $('remove-shown').addEventListener('click', () => { for (const c of visible()) picked.delete(c.id); render(); });
 $('clear').addEventListener('click', () => { picked.clear(); render(); });
-$('cancel').addEventListener('click', () => window.spawn.close());
-const save = () => window.spawn.save(picked.size ? ROSTER.filter((c) => !picked.has(c.id)).map((c) => c.id) : []);
+// Closing with unsaved changes takes a second press, so a stray Esc doesn't throw work away.
+let discarding = false;
+function close() {
+  if (key() === saved || discarding) { window.spawn.close(); return; }
+  discarding = true;
+  $('cancel').textContent = 'Discard changes';
+  $('status').innerHTML = '<em>Unsaved changes.</em> Press Esc or Discard again to close without saving.';
+}
+$('cancel').addEventListener('click', close);
+const save = () => (key() === saved ? window.spawn.close() : window.spawn.save(picked.size ? ROSTER.filter((c) => !picked.has(c.id)).map((c) => c.id) : []));
 $('save').addEventListener('click', save);
 
 document.addEventListener('keydown', (ev) => {
@@ -100,7 +120,7 @@ document.addEventListener('keydown', (ev) => {
   if ((ev.ctrlKey || ev.metaKey) && (ev.key === 's' || ev.key === 'Enter')) { ev.preventDefault(); save(); return; }
   if (ev.key === '/' && document.activeElement !== q) { ev.preventDefault(); q.focus(); q.select(); return; }
   if (ev.key === 'Escape') {
-    if (q.value) { q.value = ''; render(); } else window.spawn.close();
+    if (q.value) { q.value = ''; sticky.clear(); render(); } else close();
     return;
   }
   if (ev.key === 'Enter' && document.activeElement === q && q.value) {
@@ -111,5 +131,9 @@ document.addEventListener('keydown', (ev) => {
 
 window.spawn.get().then(({ banned }) => {
   for (const c of ROSTER) if (!banned.includes(c.id)) picked.add(c.id);
+  saved = key();
   render();
+}, (e) => {
+  $('status').innerHTML = `<em>Couldn't load the current list</em> (${String(e.message || e).replace(/[<&]/g, '')})`;
+  for (const b of document.querySelectorAll('button')) if (b.id !== 'cancel') b.disabled = true;
 });

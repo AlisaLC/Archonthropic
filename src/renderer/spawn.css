@@ -56,3 +56,4 @@ footer { display: flex; align-items: center; gap: 12px; padding: 10px 16px; back
 .bulk, .actions { display: flex; gap: 8px; flex: none; }
 .status { flex: 1; color: var(--muted); font-size: 13px; text-align: center; }
 .status strong { color: var(--text); }
+.status em { color: #f4b860; font-style: normal; font-weight: 600; }

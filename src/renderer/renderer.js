@@ -4,6 +4,8 @@ const strip = document.getElementById('strip');
 const card = document.getElementById('card');
 
 const SLOT_W = 136, SLOT_H = 192, GAP = 4, MARGIN = 8;
+const CARD_W = 252, CARD_ROOM = CARD_W + 30; // the hover card, its 6px gap and drop shadow, left of a column
+const BY_ID = new Map(ROSTER.map((c) => [c.id, c]));
 /** @type {Map<string, {el: HTMLElement, item: any, drawnKey: string}>} */
 const slots = new Map();
 let hidden = false;
@@ -13,6 +15,10 @@ const SYS_H = 218;
 const SYS_TOP = 56;
 /** @type {{el: HTMLElement, stats: any, drawnKey: string} | null} */
 let sys = null;
+
+// Only touch the DOM when something changed: every write costs a style / layout pass.
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const setVar = (el, k, v) => { if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v); };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -29,10 +35,18 @@ const barColor = (v, t) => (v >= t[2] ? '#ff5d73' : v >= t[1] ? '#f4b860' : v >=
 const T = { cpu: [40, 75, 92], mem: [65, 82, 93], disk: [85, 92, 97] }; // keep in sync with main.js THRESHOLDS
 const CULPRIT_FX = { cpu: 'emoji:🔥', mem: 'emoji:🧠', disk: 'emoji:💾' };
 
+// The body motion runs on the HTML wrapper (its own compositor layer), not inside the SVG,
+// so bobbing doesn't repaint the drawing every frame.
+function paint(el, svg, anim) {
+  const sprite = el.querySelector('.sprite');
+  sprite.className = `sprite anim-${anim}`;
+  sprite.innerHTML = svg;
+}
+
 function makeSlot(id) {
   const el = document.createElement('div');
   el.className = 'slot enter';
-  el.innerHTML = `<div class="sprite-wrap"><div class="aura"></div><div class="sprite"></div></div>
+  el.innerHTML = `<div class="sprite-wrap"><div class="aura"></div><div class="ground"></div><div class="sprite"></div></div>
     <div class="label"><div class="proj"></div><div class="state"></div></div>`;
   el.addEventListener('animationend', () => el.classList.remove('enter'), { once: true });
   el.addEventListener('mouseenter', () => { hoverId = id; renderCard(); });
@@ -44,40 +58,40 @@ function makeSlot(id) {
 
 function renderSlot(slot) {
   const { session: s, characterId, stateKey } = slot.item;
-  const ch = ROSTER.find((c) => c.id === characterId) || ROSTER[0];
+  const ch = BY_ID.get(characterId) || ROSTER[0];
   const st = STATES[stateKey] || STATES.ready;
   const el = slot.el;
-  el.style.setProperty('--accent', st.color);
+  setVar(el, '--accent', st.color);
   el.classList.toggle('attention', !!st.attention);
 
   const key = `${ch.id}|${stateKey}`;
   if (key !== slot.drawnKey) {
     slot.drawnKey = key;
-    el.querySelector('.sprite').innerHTML = drawCharacter(ch, stateKey);
+    paint(el, drawCharacter(ch, stateKey, { split: true }), st.anim);
   }
   // After the first ~20s of "done", calm the hopping down to a gentle bob.
-  const stage = el.querySelector('.stage');
-  if (stage) stage.classList.toggle('calm', stateKey === 'done' && Date.now() - s.state_since > 20000);
+  el.querySelector('.sprite').classList.toggle('calm', stateKey === 'done' && Date.now() - s.state_since > 20000);
 
-  el.querySelector('.proj').textContent = s.project;
-  el.querySelector('.state').textContent = s.detail ? `${st.label}: ${s.detail}` : st.label;
+  setText(el.querySelector('.proj'), s.project);
+  setText(el.querySelector('.state'), s.detail ? `${st.label}: ${s.detail}` : st.label);
 }
 
 // ---------------------------------------------------------------- Paimon (system monitor)
 
 function renderSys(stats) {
   if (!stats) {
-    if (sys) { sys.el.remove(); sys = null; if (hoverId === 'sys') hoverId = null; }
+    if (sys) { sys.el.remove(); sys = null; if (hoverId === 'sys') { hoverId = null; window.api.send('sys-detail', false); } }
     return;
   }
   if (!sys) {
     const el = document.createElement('div');
     el.className = 'slot sys enter';
-    el.innerHTML = `<div class="sprite-wrap"><div class="aura"></div><div class="sprite"></div></div>
+    el.innerHTML = `<div class="sprite-wrap"><div class="aura"></div><div class="ground"></div><div class="sprite"></div></div>
       <div class="label"><div class="proj">Paimon</div><div class="gauges"></div></div>`;
     el.addEventListener('animationend', () => el.classList.remove('enter'), { once: true });
-    el.addEventListener('mouseenter', () => { hoverId = 'sys'; renderCard(); });
-    el.addEventListener('mouseleave', () => { if (hoverId === 'sys') { hoverId = null; renderCard(); } });
+    // The process lists in her card are costly to gather, so main only collects them while it's open.
+    el.addEventListener('mouseenter', () => { hoverId = 'sys'; window.api.send('sys-detail', true); renderCard(); });
+    el.addEventListener('mouseleave', () => { if (hoverId === 'sys') { hoverId = null; window.api.send('sys-detail', false); renderCard(); } });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); window.api.send('menu', 'sys'); });
     strip.appendChild(el);
     sys = { el, stats: null, drawnKey: '' };
@@ -86,12 +100,12 @@ function renderSys(stats) {
   const { state, culprit } = stats.mood;
   const st = SYS_STATES[state];
   const fx = st.fx && culprit && state !== 'critical' ? CULPRIT_FX[culprit] : undefined;
-  sys.el.style.setProperty('--accent', st.color);
+  setVar(sys.el, '--accent', st.color);
   sys.el.classList.toggle('attention', !!st.attention);
   const key = `${state}|${fx}`;
   if (key !== sys.drawnKey) {
     sys.drawnKey = key;
-    sys.el.querySelector('.sprite').innerHTML = drawCharacter(PAIMON, state, { fx });
+    paint(sys.el, drawCharacter(PAIMON, state, { fx, split: true }), st.anim);
   }
   const disk = stats.disks.reduce((a, d) => (!a || d.pct > a.pct ? d : a), null);
   const rows = [['CPU', stats.cpu, T.cpu], ['RAM', stats.mem.pct, T.mem], ...(disk ? [['Disk', disk.pct, T.disk]] : [])];
@@ -124,12 +138,20 @@ function layout() {
   const fit = (h) => Math.max(1, Math.floor((h - MARGIN) / (SLOT_H + GAP)));
   const firstCol = fit(window.innerHeight - (sys ? SYS_TOP + SYS_H + GAP : 0));
   const perCol = fit(window.innerHeight);
+  const cols = slots.size > firstCol ? 1 + Math.ceil((slots.size - firstCol) / perCol) : 1;
+  requestWidth(MARGIN + cols * (SLOT_W + GAP) + CARD_ROOM);
   [...slots.values()].forEach((slot, i) => {
     const col = i < firstCol ? 0 : 1 + Math.floor((i - firstCol) / perCol);
     const row = i < firstCol ? i : (i - firstCol) % perCol;
     slot.el.style.right = `${MARGIN + col * (SLOT_W + GAP)}px`;
     slot.el.style.bottom = `${MARGIN + row * (SLOT_H + GAP)}px`;
   });
+}
+
+// The window is only as wide as the columns in use plus room for the card; main resizes it.
+let askedWidth = 0;
+function requestWidth(w) {
+  if (w !== askedWidth) { askedWidth = w; window.api.send('width', w); }
 }
 
 function renderCard() {
@@ -141,17 +163,21 @@ function renderCard() {
   }
   if (slot === sys) card.innerHTML = sysCard();
   else card.innerHTML = sessionCard(slot);
-  const wasShown = card.classList.contains('show');
   card.classList.add('show');
-  const r = slot.el.getBoundingClientRect();
-  card.style.left = `${Math.max(4, r.left - card.offsetWidth - 6)}px`;
-  card.style.top = `${Math.min(window.innerHeight - card.offsetHeight - 4, Math.max(4, r.top + 20))}px`;
-  if (!wasShown) reportShape();
+  // Layout position, not getBoundingClientRect(): a slot that's still sliding in is scaled and offset.
+  const x = slot.el.offsetLeft, y = slot.el.offsetTop, w = card.offsetWidth;
+  // Left of the character; if the window is too narrow for that (a small display), then to its right;
+  // failing both, as far left as it goes. The card ignores the mouse, so overlapping never flickers.
+  let left = x - w - 6;
+  if (left < 4) left = x + slot.el.offsetWidth + 6 + w <= window.innerWidth - 4 ? x + slot.el.offsetWidth + 6 : 4;
+  card.style.left = `${left}px`;
+  card.style.top = `${Math.min(window.innerHeight - card.offsetHeight - 4, Math.max(4, y + 20))}px`;
+  reportShape(); // the card's size and place change with its content, not only when it first shows
 }
 
 function sessionCard(slot) {
   const { session: s, characterId, stateKey } = slot.item;
-  const ch = ROSTER.find((c) => c.id === characterId) || ROSTER[0];
+  const ch = BY_ID.get(characterId) || ROSTER[0];
   const st = STATES[stateKey] || STATES.ready;
   card.style.setProperty('--accent', st.color);
   card.style.setProperty('--elem', ELEMENTS[ch.element]);
@@ -207,6 +233,7 @@ window.api.onUpdate(({ list, hidden: h }) => {
 });
 
 setInterval(() => {
+  if (hidden) return;
   for (const slot of slots.values()) if (slot.item) renderSlot(slot);
   if (hoverId) renderCard();
 }, 1000);
@@ -217,3 +244,20 @@ window.api.onSys((stats) => {
 });
 
 window.addEventListener('resize', () => { layout(); setTimeout(reportShape, 450); });
+
+// Any running CSS animation makes Chromium repaint and composite the strip at the display's refresh
+// rate, and the cost barely depends on how much moves. So the looping animations are paused and
+// stepped by hand at a lower rate; one-shot ones (slide-ins, the card popping up) still run normally.
+const FPS = 15;
+const origin = new WeakMap(); // animation -> the timeline time it started at
+let loops = null; // cached looping animations; null = collect again after the DOM changed
+new MutationObserver(() => { loops = null; }).observe(strip, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+setInterval(() => {
+  if (hidden) return;
+  if (!loops) {
+    loops = document.getAnimations().filter((a) => a.effect?.getComputedTiming().iterations === Infinity);
+    for (const a of loops) if (!origin.has(a)) { origin.set(a, a.startTime ?? document.timeline.currentTime); a.pause(); }
+  }
+  const now = document.timeline.currentTime;
+  for (const a of loops) a.currentTime = now - origin.get(a);
+}, 1000 / FPS);

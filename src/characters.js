@@ -1761,9 +1761,11 @@
     const call = (k) => (c[k] ? c[k](c) : '');
     const cheek = st.eyes === 'happy' || stateKey === 'permission' ? 0.6 : 0.35;
     const eyes = `${eye(st.eyes, c, `ig-${c.id}`)}<g ${MIRROR}>${eye(st.eyes, c, `ig2-${c.id}`)}</g>`;
+    // opts.split: leave out the ground shadow and the body motion, so the caller can move the SVG as an
+    // HTML layer (the compositor animates that without repainting the drawing every frame).
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 150" class="chibi">${defs(c)}
-      <ellipse class="shadow" cx="60" cy="143" rx="24" ry="4.5" fill="#000" opacity=".22"/>
-      <g class="stage anim-${st.anim}">
+      ${opts.split ? '' : '<ellipse class="shadow" cx="60" cy="143" rx="24" ry="4.5" fill="#000" opacity=".22"/>'}
+      <g class="stage${opts.split ? '' : ` anim-${st.anim}`}">
         <g class="body-group">
           ${call('back')}
           ${c.id === 'paimon' ? '' : legs(c)}

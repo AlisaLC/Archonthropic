@@ -32,14 +32,40 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 // systemMonitor: Paimon at the top of the strip reporting CPU / memory / disk; disks: mount points she watches.
 // banned: character ids never handed out to new sessions.
 const DEFAULTS = { display: 'secondary', scale: 1, idleAfterMinutes: 5, assignments: {}, systemMonitor: true, disks: ['/'], banned: [] };
-let config = { ...DEFAULTS };
-try { config = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }; } catch {}
+function loadConfig() {
+  let raw;
+  try { raw = fs.readFileSync(CONFIG_FILE, 'utf8'); } catch { return structuredClone(DEFAULTS); }
+  let saved;
+  try { saved = JSON.parse(raw); } catch (e) {
+    // Don't let the next save wipe a file the user can still fix by hand.
+    console.warn(`config.json is not valid JSON (${e.message}); using defaults, original kept as config.json.bad`);
+    try { fs.copyFileSync(CONFIG_FILE, `${CONFIG_FILE}.bad`); } catch {}
+    return structuredClone(DEFAULTS);
+  }
+  const c = { ...structuredClone(DEFAULTS), ...(saved && typeof saved === 'object' ? saved : {}) };
+  // A hand-edited file can hold anything; fall back per key rather than crash on it later.
+  const ok = {
+    display: (v) => v === 'primary' || v === 'secondary' || Number.isInteger(v),
+    scale: (v) => typeof v === 'number' && v >= 0.25 && v <= 4,
+    idleAfterMinutes: (v) => typeof v === 'number' && v >= 0,
+    assignments: (v) => v && typeof v === 'object' && !Array.isArray(v),
+    systemMonitor: (v) => typeof v === 'boolean',
+    disks: (v) => Array.isArray(v) && v.every((d) => typeof d === 'string'),
+    banned: (v) => Array.isArray(v) && v.every((d) => typeof d === 'string'),
+  };
+  for (const [k, valid] of Object.entries(ok)) if (!valid(c[k])) c[k] = structuredClone(DEFAULTS[k]);
+  return c;
+}
+const config = loadConfig();
 const saveConfig = () => {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  const tmp = `${CONFIG_FILE}.${process.pid}.tmp`; // write + rename, so a crash never leaves half a file
+  fs.writeFileSync(tmp, JSON.stringify(config, null, 2));
+  fs.renameSync(tmp, CONFIG_FILE);
 };
 
-const STRIP_W = Math.round(430 * config.scale); // wide enough for the hover card left of a character
+// Wide enough for the hover card left of the leftmost column; grows when sessions need more columns.
+let stripWidth = Math.round(430 * config.scale);
 
 /** @type {Map<string, {id: string, data: any, characterId: string, stateKey: string}>} */
 const sessions = new Map();
@@ -104,10 +130,10 @@ const procStat = (pid) => {
 
 // Sessions that were already running before the hooks existed (or that are sitting idle)
 // have no state file yet. Find them from /proc so they still get a character.
-function discoverProcesses(known) {
+function discoverProcesses() {
   const found = [];
   for (const name of fs.readdirSync('/proc')) {
-    if (!/^\d+$/.test(name) || known.has(+name) || !isClaudeCmd(name)) continue;
+    if (!/^\d+$/.test(name) || !isClaudeCmd(name)) continue;
     try {
       const st = procStat(name);
       if (st.state === 'T' || st.state === 't' || st.state === 'Z') continue; // suspended (Ctrl+Z) or dead
@@ -117,9 +143,23 @@ function discoverProcesses(known) {
       const cwd = fs.readlinkSync(`/proc/${name}/cwd`);
       found.push({
         session_id: `pid-${name}`, cwd, project: path.basename(cwd) || '~', state: 'idle', detail: '',
-        prompt: '', started_at: st.start, state_since: st.start, updated_at: Date.now(), pid: +name, discovered: true,
+        prompt: '', started_at: st.start, state_since: st.start, updated_at: st.start, pid: +name, discovered: true,
       });
     } catch {}
+  }
+  return found;
+}
+
+// Sweeping /proc reads every process's command line, so it runs every few seconds rather than on
+// every hook write; in between, the last result is reused minus the processes that have exited.
+const DISCOVER_EVERY = 5000;
+let found = [], foundAt = 0;
+function discovered() {
+  if (Date.now() - foundAt >= DISCOVER_EVERY) {
+    try { found = discoverProcesses(); } catch { found = []; }
+    foundAt = Date.now();
+  } else {
+    found = found.filter(isAlive);
   }
   return found;
 }
@@ -137,7 +177,8 @@ function scan() {
     if (!isAlive(d)) { fs.rmSync(full, { force: true }); continue; }
     records.push(d);
   }
-  try { records.push(...discoverProcesses(new Set(records.map((d) => d.pid)))); } catch {}
+  const known = new Set(records.map((d) => d.pid));
+  records.push(...discovered().filter((d) => !known.has(d.pid)));
   for (const d of records) {
     seen.add(d.session_id);
     let s = sessions.get(d.session_id);
@@ -175,6 +216,8 @@ let prevCpu = null;
 let prevProcs = new Map(); // pid -> cpu ticks
 const cpuHistory = [];
 let sysStats = null;
+let sysDetail = false; // Paimon's card is open, so the busiest / biggest process lists are wanted
+const NCORES = os.cpus().length;
 
 function readCpu() {
   const f = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].trim().split(/\s+/).slice(1).map(Number);
@@ -226,6 +269,8 @@ function sampleSystem() {
     cpuHistory.push(cpuPct);
     if (cpuHistory.length > 3) cpuHistory.shift(); // smooth over ~6s so a single spike doesn't panic her
     const cpuAvg = cpuHistory.reduce((a, b) => a + b, 0) / cpuHistory.length;
+    // Nobody is looking: keep only the (cheap) CPU baseline warm, so Paimon is accurate the moment she's back.
+    if (!config.systemMonitor || hidden) { prevProcs = new Map(); pushSys(); return; }
     const mem = readMem();
     const disks = [];
     for (const mount of config.disks) {
@@ -235,11 +280,12 @@ function sampleSystem() {
         disks.push({ mount, total, used: total - free, pct: (1 - free / total) * 100 });
       } catch {}
     }
-    const ncores = os.cpus().length;
+    // Walking every process is the expensive part, and only the hover card shows it.
+    const top = sysDetail ? readProcs(totalDelta / NCORES) : (prevProcs = new Map(), { byCpu: [], byMem: null });
     sysStats = {
-      cpu: cpuAvg, cpuNow: cpuPct, load: os.loadavg(), cores: ncores,
+      cpu: cpuAvg, cpuNow: cpuPct, load: os.loadavg(), cores: NCORES,
       mem: { ...mem, pct: (mem.used / mem.total) * 100 },
-      disks, uptime: os.uptime(), top: readProcs(totalDelta / ncores),
+      disks, uptime: os.uptime(), top,
     };
     sysStats.mood = sysMood(sysStats);
   } catch (e) { console.warn('system stats:', e.message); }
@@ -279,7 +325,8 @@ function targetDisplay() {
 
 function stripBounds() {
   const wa = targetDisplay().workArea;
-  return { x: wa.x + wa.width - STRIP_W, y: wa.y, width: STRIP_W, height: wa.height };
+  const width = Math.min(stripWidth, wa.width);
+  return { x: wa.x + wa.width - width, y: wa.y, width, height: wa.height };
 }
 
 function createWindow() {
@@ -332,7 +379,7 @@ function reposition() {
 function setHidden(v) {
   hidden = v;
   push();
-  refreshTray();
+  refreshTray(true);
 }
 const toggle = () => setHidden(!hidden);
 
@@ -344,18 +391,34 @@ ipcMain.on('shape', (_e, rects) => {
   win.setShape(r.length ? r.map((x) => ({ x: Math.floor(x.x * k), y: Math.floor(x.y * k), width: Math.ceil(x.width * k), height: Math.ceil(x.height * k) })) : [{ x: 0, y: 0, width: 1, height: 1 }]);
 });
 
+// Renderer asks for more room when sessions spill into another column (CSS px).
+ipcMain.on('width', (_e, w) => {
+  const px = Math.round(Number(w) * config.scale);
+  if (!Number.isFinite(px) || px <= 0 || px === stripWidth) return;
+  stripWidth = px;
+  reposition();
+});
+
+ipcMain.on('sys-detail', (_e, on) => {
+  if (sysDetail === !!on) return;
+  sysDetail = !!on;
+  if (sysDetail) readProcs(0); // baseline, so the next sample has per-process deltas
+});
+
 ipcMain.on('menu', (_e, id) => {
   if (id === 'sys' && win) { Menu.buildFromTemplate(commonMenu()).popup({ window: win }); return; }
   const s = sessions.get(id);
   if (!s || !win) return;
   const ch = ROSTER.find((c) => c.id === s.characterId);
+  const inUse = new Set([...sessions.values()].map((o) => o.characterId));
   Menu.buildFromTemplate([
     { label: `${ch.name} — ${s.data.project}`, enabled: false },
     { type: 'separator' },
     {
       label: 'Change character',
       submenu: byElement(spawnPool(), (c) => ({
-        label: c.name, type: 'radio', checked: c.id === s.characterId,
+        label: inUse.has(c.id) && c.id !== s.characterId ? `${c.name} (on screen)` : c.name,
+        type: 'radio', checked: c.id === s.characterId,
         click: () => {
           s.characterId = c.id;
           if (s.data.cwd) { config.assignments[s.data.cwd] = c.id; saveConfig(); }
@@ -436,7 +499,7 @@ function commonMenu() {
     { label: hidden ? 'Show companions' : 'Hide companions', click: toggle },
     {
       label: 'System monitor (Paimon)', type: 'checkbox', checked: config.systemMonitor,
-      click: () => { config.systemMonitor = !config.systemMonitor; saveConfig(); pushSys(); lastTrayKey = ''; refreshTray(); },
+      click: () => { config.systemMonitor = !config.systemMonitor; saveConfig(); sampleSystem(); refreshTray(true); },
     },
     {
       label: 'Monitor',
@@ -456,8 +519,19 @@ function commonMenu() {
 }
 
 let lastTrayKey = '';
-function refreshTray() {
+let trayTimer = null, trayBuiltAt = 0;
+const TRAY_EVERY = 3000;
+// The rows show each session's state, which changes on nearly every tool call, and every rebuild ships
+// the whole menu to the desktop shell. So rebuild at most every few seconds, always ending on the latest.
+function refreshTray(now = false) {
   if (!tray) return;
+  if (now) { clearTimeout(trayTimer); trayTimer = null; lastTrayKey = ''; buildTray(); return; }
+  if (trayTimer) return;
+  const wait = trayBuiltAt + TRAY_EVERY - Date.now();
+  if (wait > 0) { trayTimer = setTimeout(() => { trayTimer = null; refreshTray(); }, wait); return; }
+  buildTray();
+}
+function buildTray() {
   const rows = [...sessions.values()].map((s) => {
     const ch = ROSTER.find((c) => c.id === s.characterId);
     return `${ch.name} · ${s.data.project} — ${STATES[s.stateKey].label}`;
@@ -465,6 +539,7 @@ function refreshTray() {
   const key = JSON.stringify([rows, config.display, hidden, config.systemMonitor]);
   if (key === lastTrayKey) return;
   lastTrayKey = key;
+  trayBuiltAt = Date.now();
   const waiting = [...sessions.values()].filter((s) => STATES[s.stateKey].attention).length;
   tray.setToolTip(`${sessions.size} session(s)${waiting ? `, ${waiting} waiting for you` : ''}`);
   tray.setContextMenu(Menu.buildFromTemplate([

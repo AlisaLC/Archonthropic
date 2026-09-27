@@ -86,6 +86,9 @@ bin/start.sh                    # background; `npm start` runs it in the foregro
 - `systemMonitor`: show Paimon (default `true`; also a checkbox in the tray menu)
 - `disks`: mount points Paimon watches (default `["/"]`, e.g. `["/", "/home", "/mnt/data"]`)
 
+A setting with an invalid value falls back to its default. If the file isn't valid JSON at all, the app starts
+with defaults and keeps your file as `config.json.bad` so you can fix it.
+
 ### Characters
 
 The 81 built-in characters (every playable woman in Genshin, plus Lumine) are original SVG chibis, each drawn with
@@ -94,7 +97,8 @@ one picked from its path, skipping characters already on screen. Right-click a c
 sticks for that project). To choose who can spawn, open **Spawn list…** from the right-click or tray menu: a
 searchable window with every character, filterable by element. Tick the ones you want (or **Clear all** and pick a
 few), then **Save**. Characters you leave out stop being handed out, and any project or open session that had one
-gets someone else. Keys: `/` search, `Enter` toggles the top match, `Ctrl+S` saves, `Esc` clears or closes.
+gets someone else. Keys: `/` search, `Enter` toggles the top match, `Ctrl+S` saves, `Esc` clears or closes
+(with unsaved changes, press it twice).
 Character ids: `raiden nahida hutao ganyu yae ayaka furina yelan aino aloy amber arlecchino barbara beidou candace charlotte chasca chevreuse chiori citlali clorinde collei columbina dehya diona dori emilie escoffier eula faruzan fischl iansan ineffa jahoda jean kachina keqing kirara klee kokomi kuki lanyan lauma layla linnea lisa lynette mavuika mona mualani navia nefer nicole nilou ningguang noelle odette prune qiqi rosaria sandrone sara sayu shenhe sigewinne skirk sucrose lumine varesa vesna vodyanitsa xiangling xianyun xilonen xinyan yanfei yaoyao yoimiya mizuki yunjin zibai`.
 
 ## How it works
