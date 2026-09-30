@@ -432,6 +432,28 @@ ipcMain.on('menu', (_e, id) => {
   ]).popup({ window: win });
 });
 
+// Click a character to jump to her terminal. GNOME Terminal puts the tab's D-Bus
+// path in each child's environment, and its search provider (what the overview
+// uses) switches to that tab and raises the window, which also works on Wayland.
+function terminalTab(pid) {
+  try {
+    const env = Object.fromEntries(fs.readFileSync(`/proc/${pid}/environ`, 'utf8').split('\0')
+      .map((kv) => [kv.slice(0, kv.indexOf('=')), kv.slice(kv.indexOf('=') + 1)]));
+    const screenPath = env.GNOME_TERMINAL_SCREEN || '';
+    if (!screenPath) return null;
+    return { service: env.GNOME_TERMINAL_SERVICE || 'org.gnome.Terminal', uuid: path.basename(screenPath).replace(/_/g, '-') };
+  } catch { return null; }
+}
+
+ipcMain.on('focus', (_e, id) => {
+  const s = sessions.get(id);
+  const tab = s && s.data.pid && terminalTab(s.data.pid);
+  if (!tab) return;
+  require('child_process').execFile('gdbus', ['call', '--session', '--dest', tab.service,
+    '--object-path', '/org/gnome/Terminal/SearchProvider',
+    '--method', 'org.gnome.Shell.SearchProvider2.ActivateResult', tab.uuid, '[]', '0'], () => {});
+});
+
 // One submenu per element, so the long roster stays browsable.
 function byElement(list, item) {
   return Object.keys(ELEMENTS)

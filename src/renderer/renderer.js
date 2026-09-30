@@ -52,6 +52,7 @@ function makeSlot(id) {
   el.addEventListener('mouseenter', () => { hoverId = id; renderCard(); });
   el.addEventListener('mouseleave', () => { if (hoverId === id) { hoverId = null; renderCard(); } });
   el.addEventListener('contextmenu', (e) => { e.preventDefault(); window.api.send('menu', id); });
+  el.addEventListener('click', (e) => { if (e.button === 0) window.api.send('focus', id); });
   strip.appendChild(el);
   return { el, item: null, drawnKey: '' };
 }

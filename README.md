@@ -28,6 +28,7 @@ waiting for you. Paimon floats on top and keeps an eye on the machine.
 | Compacting | dizzy spiral eyes |
 
 Hover a character for the project path, the last prompt and how long she's been in that state.
+Click her to jump to her terminal tab (GNOME Terminal only).
 Right-click her to change character (remembered per project) or copy the project path.
 
 ### Paimon
